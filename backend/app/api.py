@@ -243,6 +243,7 @@ def revisions(target: TargetQuery, store: S, gate: GateQuery = "09:00") -> Revis
 
 
 # Serve the built frontend (single process, single URL). Must be mounted after the API routes.
-STATIC_DIR = Path(os.environ.get("STATIC_DIR", Path(__file__).resolve().parents[2] / "frontend" / "dist"))
+_DEFAULT_STATIC = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+STATIC_DIR = Path(os.environ.get("STATIC_DIR", _DEFAULT_STATIC))
 if STATIC_DIR.is_dir():
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
