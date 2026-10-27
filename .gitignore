@@ -6,4 +6,7 @@ dist/
 .mypy_cache/
 .pytest_cache/
 .env
+.vercel/
 *.log
+
+.vercel

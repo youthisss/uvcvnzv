@@ -5,7 +5,7 @@ quantifies how wrong those forecasts have been. GB national wind only, January 2
 
 - Forecasts: Elexon BMRS `WINDFOR` (hourly). Actuals: `FUELHH` with `fuelType = WIND` (30-minute).
 - Backend: Python, FastAPI, pandas. Frontend: React, TypeScript, Vite, TanStack Query, Recharts.
-- **Deployment link:** _not deployed yet; Vercel commands are in "Deployment" below, then paste the URL here._
+- **Deployment link:** https://gridbricks-challenge-psi.vercel.app _(temporary Vercel deployment; see "Deployment" to redeploy permanently)_
 
 ## The core idea: no look-ahead
 
@@ -56,7 +56,7 @@ docs/
   data-notes.md      what the Elexon data actually looks like (cadence, resolution, coverage)
   video-script.md    outline for the two-part video
 .github/workflows/ci.yml   backend lint/types/tests, frontend lint/tests/build
-api/index.py, vercel.json, requirements.txt, .vercelignore   Vercel deploy (see Deployment)
+index.py, vercel.json, requirements.txt, .vercelignore   Vercel deploy (see Deployment)
 ```
 
 ## Run locally (without Docker)
@@ -114,25 +114,29 @@ Interactive docs at `/docs`. Dates are limited to 2026-01-01 .. 2026-01-31.
 
 ## Deployment (Vercel, no Docker)
 
-One Vercel project serves both parts: the Vite build is published as static files, and the FastAPI app runs as a Python
-serverless function (`api/index.py`) behind `/api/*`. Configuration lives in `vercel.json`; Python dependencies in the root
-`requirements.txt` (exported from `backend/uv.lock`); `.vercelignore` keeps tests and virtualenvs out of the bundle.
+One Vercel project runs the whole app as a single Python (FastAPI) function: `index.py` at the repo root is the entrypoint,
+and the FastAPI app serves both `/api/*` and the built frontend. `vercel.json` builds the frontend and bundles
+`backend/app`, `backend/data` and `frontend/dist` into the function; Python dependencies come from the root
+`requirements.txt` (exported from `backend/uv.lock`); `.vercelignore` keeps tests and virtualenvs out of the upload.
 
-Verified locally: the entrypoint (`api/index.py`) answers `/api/health` and `/api/metrics` with the same numbers as the
-backend tests, and the installed Python dependencies are about 92 MB (Vercel's function limit is 250 MB). The snapshot is
-stored as `csv.gz` (not parquet) precisely to avoid shipping `pyarrow`. The deployment itself needs a Vercel account
-(the Hobby plan is free).
+Deployed and checked on Vercel: `/api/health` returns the snapshot sizes, `/api/metrics` returns the same MAE as the backend
+tests (2142.12 MW), the UI loads without console or network errors, and invalid input returns 422. The installed
+dependencies are about 92 MB (function limit 250 MB); the snapshot is `csv.gz` rather than parquet to avoid shipping `pyarrow`.
+
+Notes learned while deploying (all reflected in `vercel.json`):
+
+- Do not set a custom `installCommand`: it replaces Vercel's Python dependency install. Install npm packages inside `buildCommand` instead.
+- Vercel routes requests to the *rewritten* path in FastAPI projects, so no rewrite is used; the app receives the original path.
 
 ```bash
-# from the repo root
+# from the repo root; use an anonymous project name
 npx vercel login
 npx vercel link --yes --project <anonymous-project-name>
 npx vercel deploy --prod --yes
 curl https://<anonymous-project-name>.vercel.app/api/health
 ```
 
-Then put the production URL in the deployment link at the top of this README. Use an anonymous project name, and check the
-URL in a private window.
+Then put the production URL in the deployment link at the top of this README and open it in a private window.
 
 If `requirements.txt` needs regenerating after a dependency change: `cd backend && uv export --no-hashes --no-dev --no-emit-project -o ../requirements.txt`.
 
