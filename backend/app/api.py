@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import math
+import os
 from datetime import date, time
+from pathlib import Path
 from typing import Annotated, Any
 
 import pandas as pd
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.frame import Mode, build_frame, hour_of_day
@@ -237,3 +240,9 @@ def revisions(target: TargetQuery, store: S, gate: GateQuery = "09:00") -> Revis
             for r in f.to_dict("records")
         ],
     )
+
+
+# Serve the built frontend (single process, single URL). Must be mounted after the API routes.
+STATIC_DIR = Path(os.environ.get("STATIC_DIR", Path(__file__).resolve().parents[2] / "frontend" / "dist"))
+if STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
