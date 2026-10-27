@@ -31,7 +31,7 @@ gate such as 16:00 cuts MAE to 1,981 MW but may be past the market deadline), ad
 
 ## Part 2 - Tech lead walkthrough (about 5 min)
 
-1. **Architecture (0:00-1:00).** Elexon -> `ingest.py` -> committed parquet snapshot -> `selection.py` -> `frame.py` -> `metrics.py` -> FastAPI -> React.
+1. **Architecture (0:00-1:00).** Elexon -> `ingest.py` -> committed csv.gz snapshot -> `selection.py` -> `frame.py` -> `metrics.py` -> FastAPI -> React.
    No runtime dependency on Elexon; refresh script for new data. Draw this as a simple box diagram.
 2. **The as-of definition and why (1:00-2:15).** Show `selection.py`. Latest `publishTime <= D-1 gate`, never the global latest (look-ahead leakage).
    Gate in UK wall-clock time (BST-safe, tested). Mention the gate sensitivity: 09:00 uses the 07:30 publish, 09:30 uses the 09:30 publish.

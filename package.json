@@ -1,8 +1,0 @@
-{
-  "name": "windfor-eval",
-  "private": true,
-  "engines": { "node": "22.x" },
-  "scripts": {
-    "heroku-postbuild": "cd frontend && npm ci --include=dev && npm run build"
-  }
-}

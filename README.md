@@ -5,7 +5,7 @@ quantifies how wrong those forecasts have been. GB national wind only, January 2
 
 - Forecasts: Elexon BMRS `WINDFOR` (hourly). Actuals: `FUELHH` with `fuelType = WIND` (30-minute).
 - Backend: Python, FastAPI, pandas. Frontend: React, TypeScript, Vite, TanStack Query, Recharts.
-- **Deployment link:** _not deployed yet; commands are in "Deployment" below, then paste the URL here._
+- **Deployment link:** _not deployed yet; Vercel commands are in "Deployment" below, then paste the URL here._
 
 ## The core idea: no look-ahead
 
@@ -41,10 +41,10 @@ backend/
   app/selection.py   as-of forecast selection (day-ahead gate and fixed horizon)
   app/frame.py       hourly alignment of actuals/forecasts, persistence baseline
   app/metrics.py     accuracy metrics
-  app/ingest.py      Elexon download (chunked, retrying) to parquet
+  app/ingest.py      Elexon download (chunked, retrying) to csv.gz
   app/store.py       loads the committed snapshot
   app/api.py         FastAPI routes; also serves the built frontend if frontend/dist exists
-  data/              committed snapshot: Dec 2025 - Jan 2026 (windfor.parquet, fuelhh_wind.parquet)
+  data/              committed snapshot: Dec 2025 - Jan 2026 (windfor.csv.gz, fuelhh_wind.csv.gz)
   tests/             pytest: selection edge cases, metrics, alignment, API
 frontend/
   src/lib/           API client, formatting, CSV export (+ vitest tests)
@@ -56,7 +56,7 @@ docs/
   data-notes.md      what the Elexon data actually looks like (cadence, resolution, coverage)
   video-script.md    outline for the two-part video
 .github/workflows/ci.yml   backend lint/types/tests, frontend lint/tests/build
-Procfile, package.json, requirements.txt, .python-version   Heroku buildpack deploy (see Deployment)
+api/index.py, vercel.json, requirements.txt, .vercelignore   Vercel deploy (see Deployment)
 ```
 
 ## Run locally (without Docker)
@@ -112,30 +112,31 @@ Interactive docs at `/docs`. Dates are limited to 2026-01-01 .. 2026-01-31.
 - One month of data: results describe January 2026 and are not a guarantee for other seasons.
 - Single national series; no price, thermal cost or imbalance modelling.
 
-## Deployment (Heroku, buildpack-based, no Docker)
+## Deployment (Vercel, no Docker)
 
-The repo root is deployable as-is: `package.json` (`heroku-postbuild` builds the frontend), `requirements.txt` and
-`.python-version` (Python deps), and `Procfile` (`uvicorn` serves the API and the built frontend on `$PORT`).
-This path was verified locally on a clean copy: install from `requirements.txt` on Python 3.12, build with
-`NODE_ENV=production`, start with the Procfile command. The deployment itself needs a Heroku account and a paid dyno.
+One Vercel project serves both parts: the Vite build is published as static files, and the FastAPI app runs as a Python
+serverless function (`api/index.py`) behind `/api/*`. Configuration lives in `vercel.json`; Python dependencies in the root
+`requirements.txt` (exported from `backend/uv.lock`); `.vercelignore` keeps tests and virtualenvs out of the bundle.
+
+Verified locally: the entrypoint (`api/index.py`) answers `/api/health` and `/api/metrics` with the same numbers as the
+backend tests, and the installed Python dependencies are about 92 MB (Vercel's function limit is 250 MB). The snapshot is
+stored as `csv.gz` (not parquet) precisely to avoid shipping `pyarrow`. The deployment itself needs a Vercel account
+(the Hobby plan is free).
 
 ```bash
-# one-time: install the CLI (Windows: winget install Heroku.HerokuCLI) and log in
-heroku login
-
-# from the repo root; pick an anonymous app name
-heroku create <anonymous-app-name> --buildpack heroku/nodejs
-heroku buildpacks:add heroku/python          # order matters: nodejs first, then python
-git push heroku main
-heroku ps:scale web=1                        # only needed if no dyno is running
-heroku open
-curl https://<anonymous-app-name>.herokuapp.com/api/health
+# from the repo root
+npx vercel login
+npx vercel link --yes --project <anonymous-project-name>
+npx vercel deploy --prod --yes
+curl https://<anonymous-project-name>.vercel.app/api/health
 ```
 
-Then put the resulting URL in the deployment link at the top of this README.
+Then put the production URL in the deployment link at the top of this README. Use an anonymous project name, and check the
+URL in a private window.
 
-Docker packaging (multi-stage `Dockerfile`, `docker-compose.yml`, `heroku.yml` for the container stack) is not included yet;
-when added, switch the app with `heroku stack:set container`.
+If `requirements.txt` needs regenerating after a dependency change: `cd backend && uv export --no-hashes --no-dev --no-emit-project -o ../requirements.txt`.
+
+Docker packaging (multi-stage `Dockerfile`, `docker-compose.yml`) is not included yet.
 
 ## AI tools used
 

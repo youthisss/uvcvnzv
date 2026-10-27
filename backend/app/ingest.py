@@ -87,6 +87,6 @@ def refresh(out_dir: Path, start: date = DEFAULT_START, end: date = DEFAULT_END)
     with httpx.Client(timeout=60) as client:
         wf = fetch_windfor(client, start, end)
         fh = fetch_fuelhh_wind(client, start, end)
-    wf.to_parquet(out_dir / "windfor.parquet", index=False)
-    fh.to_parquet(out_dir / "fuelhh_wind.parquet", index=False)
+    wf.to_csv(out_dir / "windfor.csv.gz", index=False)
+    fh.to_csv(out_dir / "fuelhh_wind.csv.gz", index=False)
     print(f"windfor: {len(wf)} rows, fuelhh wind: {len(fh)} rows -> {out_dir}")

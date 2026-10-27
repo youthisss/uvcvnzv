@@ -18,8 +18,11 @@ class DataStore:
 
 
 def load_store(data_dir: Path = DATA_DIR) -> DataStore:
-    wf = pd.read_parquet(data_dir / "windfor.parquet")
-    fh = pd.read_parquet(data_dir / "fuelhh_wind.parquet")
+    wf = pd.read_csv(data_dir / "windfor.csv.gz")
+    fh = pd.read_csv(data_dir / "fuelhh_wind.csv.gz")
+    for df, cols in ((wf, ("publishTime", "startTime")), (fh, ("startTime",))):
+        for c in cols:
+            df[c] = pd.to_datetime(df[c], utc=True)
     return DataStore(forecasts=wf, actuals_hourly=hourly_actuals(fh))
 
 
