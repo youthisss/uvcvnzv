@@ -5,7 +5,7 @@ quantifies how wrong those forecasts have been. GB national wind only, January 2
 
 - Forecasts: Elexon BMRS `WINDFOR` (hourly). Actuals: `FUELHH` with `fuelType = WIND` (30-minute).
 - Backend: Python, FastAPI, pandas. Frontend: React, TypeScript, Vite, TanStack Query, Recharts.
-- **Deployment link:** _TODO: add after deploying (see "Deployment" below)._
+- **Deployment link:** _not deployed yet; commands are in "Deployment" below, then paste the URL here._
 
 ## The core idea: no look-ahead
 
@@ -56,6 +56,7 @@ docs/
   data-notes.md      what the Elexon data actually looks like (cadence, resolution, coverage)
   video-script.md    outline for the two-part video
 .github/workflows/ci.yml   backend lint/types/tests, frontend lint/tests/build
+Procfile, package.json, requirements.txt, .python-version   Heroku buildpack deploy (see Deployment)
 ```
 
 ## Run locally (without Docker)
@@ -111,10 +112,30 @@ Interactive docs at `/docs`. Dates are limited to 2026-01-01 .. 2026-01-31.
 - One month of data: results describe January 2026 and are not a guarantee for other seasons.
 - Single national series; no price, thermal cost or imbalance modelling.
 
-## Docker and deployment
+## Deployment (Heroku, buildpack-based, no Docker)
 
-_Pending._ The app currently runs as a single process (see above). A multi-stage Dockerfile, `docker-compose.yml` and the
-Heroku container config (`heroku.yml`) are still to be added, then the deployment link above.
+The repo root is deployable as-is: `package.json` (`heroku-postbuild` builds the frontend), `requirements.txt` and
+`.python-version` (Python deps), and `Procfile` (`uvicorn` serves the API and the built frontend on `$PORT`).
+This path was verified locally on a clean copy: install from `requirements.txt` on Python 3.12, build with
+`NODE_ENV=production`, start with the Procfile command. The deployment itself needs a Heroku account and a paid dyno.
+
+```bash
+# one-time: install the CLI (Windows: winget install Heroku.HerokuCLI) and log in
+heroku login
+
+# from the repo root; pick an anonymous app name
+heroku create <anonymous-app-name> --buildpack heroku/nodejs
+heroku buildpacks:add heroku/python          # order matters: nodejs first, then python
+git push heroku main
+heroku ps:scale web=1                        # only needed if no dyno is running
+heroku open
+curl https://<anonymous-app-name>.herokuapp.com/api/health
+```
+
+Then put the resulting URL in the deployment link at the top of this README.
+
+Docker packaging (multi-stage `Dockerfile`, `docker-compose.yml`, `heroku.yml` for the container stack) is not included yet;
+when added, switch the app with `heroku stack:set container`.
 
 ## AI tools used
 
